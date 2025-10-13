@@ -11,7 +11,7 @@ hPR = 43.26e6;%??
 h0 = 11000;%??
 M0 = 0.7;%??
 
-Tt4 = 1600;       
+Tt4 = 1700;       
 
 % ASSUMED PARAMETERS
 pi_fan = 1.8;  
