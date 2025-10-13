@@ -1,62 +1,91 @@
-clear all;
+clear;
 close all;
 clc
 
-% EXCEL PARAMETERS
-OPR_design = 35.5;
-alpha = 10.7;
-hPR = 43.26e6;%??
+%% Input data
 
-% CHOOSEN PARAMETERS
-h0 = 11000;%??
-M0 = 0.7;%??
+scenario1 = [1e5, 25+273, 0];   % P (Pa), T (K), v (m/s)
+scenario2 = [0.3e5, -45+273, 250];   % P (Pa), T (K), v (m/s)
 
-Tt4 = 1700;       
-
-% ASSUMED PARAMETERS
 pi_fan = 1.8;  
+pi_c = 16;
+
+alpha = 5;              % By-Pass Ratio
+hPR = 44.24e6;          % C10H22(l)
+
+T_Fin = 25;             % ??
+Tt4 = 1600;         
+
+eta_pf = 0.9;
+eta_pc = 0.9;
+eta_pt = 0.92;
+
+eta_nc = 0.96;          % ??
+eta_nb = 0.96;          % ??
+
+eta_m = 0.99;
+
+eta_cc = 0.97;
+
+deltaP_34 = 0.05e5;     % Pa
+
+m_dot = 220;            % kg/s
+
+S_0 = 3; S_1 = 3.75;    % m^2
+
+c_pa = 1005;            % J/(kg·K)
+c_pg = 1150;            % J/(kg·K)
+
+R_a = 287;
+R_g = 287.6;            % ???
+
+%% Computations
+
+gamma_a = c_pa / (c_pa-R_a);
+gamma_g = c_pg / (c_pg-R_g);
 
 
+%% Scenario 1
+
+% Freestream (0)
+T0 = scenario1(2);
+P0 = scenario1(1);
+v0 = scenario1(3);
+a0 = sqrt(gamma_a*R_a*T0);
+M0 = v0/a0;
+
+Tt0 = T0 * (1 + ((gamma_a -1)/2) * M0^2);
+Pt0 = P0 * (1 + ((gamma_a -1)/2) * M0^2)^(gamma_a/(gamma_a-1));
+
+% Inlet (1)
 pi_inlet = 0.99;
-pi_burner = 0.9;
+Tt1 = Tt0;
+Pt1 = Pt0 * pi_inlet;
 
-efficiency_Fan = 0.9;
-efficiency_LPC = 0.9;
-efficiency_HPC = 0.85;
-efficiency_Burner = 0.97;
+% Fan (2)
+tau_fan = pi_fan^((gamma_a-1)/(gamma_a*eta_pf));
+Tt2 = Tt1 * tau_fan;
+Pt2 = Pt1 * pi_fan;
 
-efficiency_MECH_HP = 0.99;
-efficiency_MECH_LP = 0.99;
+% Compressor (3)
+tau_c = pi_c^((gamma_a-1)/(gamma_a*eta_pc));
+Tt3 = Tt2 * tau_c;
+Pt3 = pi_c * Pt2;
 
-efficiency_HPT = 0.92;
-efficiency_LPT = 0.92;
+% Combustion chamber (4)
+f = (c_pg*Tt4-c_pa*Tt3)/(eta_cc*hPR-c_pg*Tt4);
+Pt4 = Pt3 + deltaP_34;
 
-efficiency_Nozzle_CORE = 0.89;
-efficiency_Nozzle_SEC = 0.9;
+% High Pressure Turbine (5)
+tau_HPT = 1 - c_pa*(Tt3-Tt2) / (eta_m*(1+f)*c_pg*Tt4);
+Tt5 = tau_HPT*Tt4;
+pi_HPT = (tau_HPT)^(gamma_g/((gamma_g-1)*eta_pt));
+Pt5 = pi_HPT*Pt4;
 
+% Low Pressure Turbine (6)
+tau_LPT = 1 - c_pa*(Tt2-Tt1) / (eta_m*(1+f)*c_pg*Tt5);
+Tt6 = tau_LPT*Tt5;
+pi_LPT = (tau_LPT)^(gamma_g/((gamma_g-1)*eta_pt));
+Pt6 = pi_LPT*Pt5;
 
-R_Cold = 287;%??
-Cp_Cold = 1005;
-Gamma_Cold = 1.4;%??
-Cp_Hot = 1150;
-Gamma_Hot = 1.3;%??
-R_hot = Cp_Hot*(Gamma_Hot-1)/Gamma_Hot;
-
-
-% --- Constant between iterations ----
-% Freestream
-T0 = 25+273.15;
-P0 = 1e5;
-v0 = M0 * sqrt(Gamma_Cold * R_Cold * T0);
-Tt0 = T0 * (1 + ((Gamma_Cold -1)/2) * M0^2);
-Pt0 = P0 * (1 + ((Gamma_Cold -1)/2) * M0^2)^(Gamma_Cold/(Gamma_Cold-1));
-
-% Inlet
-Tt2 = Tt0;
-Pt2 = Pt0 * pi_inlet;
-
-% % Fan
-% Tt13 = Tt2 * ((1/efficiency_Fan)*(pi_fan^((Gamma_Cold-1)/Gamma_Cold) - 1) + 1);
-% Pt13 = Pt2 * pi_fan;
-% 
-% pi_LPC_design = OPR_design/(pi_HPC_design*pi_fan);
+% Core Nozzle (7)
