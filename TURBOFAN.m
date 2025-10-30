@@ -11,9 +11,9 @@ pi_fan = 1.8;
 pi_c = 16;
 
 alpha = 5;              % By-Pass Ratio
-hPR = 44.24e6;          % C10H22(l)
+hPR = 44.24e6;          % C10H22(l)         ASSUMED!!!
 
-T_Fin = 25;             % ??
+T_Fin = 25;             % ??                TO CALCULATE h_f!!
 Tt4 = 1600;         
 
 eta_pf = 0.9;
@@ -45,7 +45,7 @@ gamma_a = c_pa / (c_pa-R_a);
 gamma_g = c_pg / (c_pg-R_g);
 
 
-%% Scenario 1
+%% Thermodynamic cycle
 
 % Freestream (0)
 T0 = scenario1(2);
@@ -53,6 +53,7 @@ P0 = scenario1(1);
 v0 = scenario1(3);
 a0 = sqrt(gamma_a*R_a*T0);
 M0 = v0/a0;
+rho0 = P0/(R_a*T0);
 
 Tt0 = T0 * (1 + ((gamma_a -1)/2) * M0^2);
 Pt0 = P0 * (1 + ((gamma_a -1)/2) * M0^2)^(gamma_a/(gamma_a-1));
@@ -72,9 +73,12 @@ tau_c = pi_c^((gamma_a-1)/(gamma_a*eta_pc));
 Tt3 = Tt2 * tau_c;
 Pt3 = pi_c * Pt2;
 
+% m_dot = rho*v*A
+% rho = p/(RT)
+
 % Combustion chamber (4)
 f = (c_pg*Tt4-c_pa*Tt3)/(eta_cc*hPR-c_pg*Tt4);
-Pt4 = Pt3 + deltaP_34;
+Pt4 = Pt3 + deltaP_34;                              %% NOT CORRECT. STATIC PRESSURES
 
 % High Pressure Turbine (5)
 tau_HPT = 1 - c_pa*(Tt3-Tt2) / (eta_m*(1+f)*c_pg*Tt4);
@@ -89,3 +93,47 @@ pi_LPT = (tau_LPT)^(gamma_g/((gamma_g-1)*eta_pt));
 Pt6 = pi_LPT*Pt5;
 
 % Core Nozzle (7)
+Tt7 = Tt6;
+
+M7 = 1;         % First, chocked nozzle is assumed
+T7 = Tt7 / (1+gamma_g*R_g*M7^2/(2*c_pg));
+v7 = M7*sqrt(gamma_g*R_g*T7);
+T7s = ((T7-Tt6) / eta_nc) + Tt6;
+P7 = Pt6 * (T7s/Tt6)^(gamma_g/(gamma_g-1));
+
+if P7 > P0      % If not chocked nozzle, matched nozzle
+    
+    P7 = P0;
+    T7s = Tt6 * (P7/Pt6)^((gamma_g+1)/gamma_g);
+    T7 = eta_nc * (T7s-Tt6) + Tt6;
+    v7 = sqrt((Tt6-T7) * 2*c_pg);
+    M7 = v7 / sqrt(gamma_g*R_g*T7);
+
+end
+
+rho7 = P7/(R_g*T7);
+
+% By-pass Nozzle (8)
+Tt8 = Tt2;
+
+M8 = 1;         % First, chocked nozzle is assumed
+T8 = Tt8 / (1+gamma_a*R_a*M8^2/(2*c_pa));
+v8 = M8*sqrt(gamma_a*R_a*T8);
+T8s = ((T8-Tt2) / eta_nb) + Tt2;
+P8 = Pt2 * (T8s/Tt2)^(gamma_a/(gamma_a-1));
+
+if P8 > P0      % If not chocked nozzle, matched nozzle
+    
+    P8 = P0;
+    T8s = Tt2 * (P8/Pt2)^((gamma_a+1)/gamma_a);
+    T8 = eta_nb * (T8s-Tt2) + Tt2;
+    v8 = sqrt((Tt2-T8) * 2*c_pa);
+    M8 = v8 / sqrt(gamma_a*R_a*T8);
+
+end
+
+rho8 = P8/(R_a*T8);
+
+%% Performance analysis
+
+% Thrust
