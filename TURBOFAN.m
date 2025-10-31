@@ -31,6 +31,9 @@ deltaP_34 = 0.05e5;     % Pa
 
 m_dot = 220;            % kg/s
 
+m_dot_core = m_dot/(1+alpha);
+m_dot_sec  = alpha/(1+alpha)*m_dot;
+
 S_0 = 3; S_1 = 3.75;    % m^2
 
 c_pa = 1005;            % J/(kg·K)
@@ -136,4 +139,29 @@ rho8 = P8/(R_a*T8);
 
 %% Performance analysis
 
-% Thrust
+% Areas
+A7 = ( (1+f)*m_dot_core )/(rho7*v7);  
+A8 = ( m_dot_sec )/(rho8*v8);        
+
+% Uninstalled thrust
+F_core=(1+f)*m_dot_core*v7-m_dot_core*v0 + (P7 - P0)*A7;
+F_sec=m_dot_sec*v8-m_dot_sec*v0  + (P8 - P0)*A8;
+F=F_core + F_sec;
+
+F_core_sp = F_core/m_dot_core;   % [m/s]
+F_sec_sp= F_sec /m_dot_sec;    % [m/s]
+F_sp= F/m_dot;             % [m/s]
+FR= F_core/F_sec;
+F_adim= F/(a0*m_dot);
+
+% TSFC and F_sp
+g0   = 9.81;
+TSFC = f/((1+alpha)*F_sp); % [kg/(N·s)]
+I_sp = ((1+alpha)/f)*(F_sp/g0);  % [s]
+
+delta_e_k = 0.5*((1+f)/(1+alpha)*v7^2 + (alpha/(1+alpha))*v8^2 - v0^2); % [J/kg]
+
+% Eficiencies
+eta_T = (1+alpha)*delta_e_k/(f*hPR);
+eta_P = (v0*F_sp)/delta_e_k;
+eta_O = eta_T*eta_P;
